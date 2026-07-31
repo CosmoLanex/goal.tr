@@ -1,0 +1,584 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>nukrax.goal — Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Outfit:wght@200;300;400;500;600;700&display=swap" rel="stylesheet">
+<link rel="icon" href="assets/logo.png" type="image/png"/>
+<link rel="stylesheet" href="assets/shared.css">
+<style>
+/* ── VIEW SWITCHING ── */
+.view { display: none; }
+.view.active { display: block; animation: viewIn 0.4s cubic-bezier(0.22,1,0.36,1) both; }
+@keyframes viewIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .view.active { animation: none; } }
+
+/* ══════════════ DASHBOARD VIEW ══════════════ */
+.hero {
+  position: relative; margin-bottom: clamp(28px,4vw,40px);
+  display: flex; align-items: flex-end; justify-content: space-between; flex-wrap: wrap; gap: 16px;
+}
+.hero-sup {
+  display: inline-flex; align-items: center; gap: 8px;
+  background: rgba(19,26,33,0.5); backdrop-filter: blur(12px);
+  border: 1px solid rgba(242,245,245,0.09);
+  border-radius: 40px; padding: 7px 16px 7px 12px;
+  font-size: 11px; color: var(--secondary); font-family:'Space Mono',monospace;
+  letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 12px;
+}
+.hero-sup .dot2 { width:5px;height:5px;border-radius:50%;background:var(--accent); animation: pulseDot 2.4s ease-in-out infinite; }
+@keyframes pulseDot { 0%,100%{box-shadow:0 0 0 0 rgba(143,184,196,0.45);} 50%{box-shadow:0 0 0 4px rgba(143,184,196,0);} }
+.hero h1 { font-size: clamp(28px,4.4vw,42px); font-weight: 300; letter-spacing: -0.02em; color: var(--white); }
+.hero h1 strong { font-weight: 600; color: var(--accent); }
+.hero-meta { font-family:'Space Mono',monospace; font-size: 12px; color: var(--mid); text-align: right; }
+.hero-meta b { color: var(--text); font-weight: 400; }
+
+.dash-grid { display: grid; grid-template-columns: 1.3fr 1fr; gap: 16px; margin-bottom: 16px; }
+@media (max-width: 860px) { .dash-grid { grid-template-columns: 1fr; } }
+
+.goal-card { display: flex; align-items: center; gap: 28px; animation: ccIn 0.5s cubic-bezier(0.16,1,0.3,1) both; }
+@media (max-width: 560px) { .goal-card { flex-direction: column; text-align: center; } }
+.ring-wrap { position: relative; width: 168px; height: 168px; flex-shrink: 0; }
+.ring-wrap svg { width: 100%; height: 100%; transform: rotate(-90deg); }
+.ring-track { fill: none; stroke: var(--layer4); stroke-width: 10; }
+.ring-fill { fill: none; stroke: var(--accent); stroke-width: 10; stroke-linecap: round; filter: drop-shadow(0 0 8px rgba(143,184,196,0.45)); }
+.ring-center { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+.ring-pct { font-size: 28px; font-weight: 600; color: var(--white); font-variant-numeric: tabular-nums; }
+.ring-label { font-size: 10px; color: var(--mid); text-transform: uppercase; letter-spacing: 0.1em; font-family:'Space Mono',monospace; margin-top: 2px; }
+
+.goal-figures { flex: 1; min-width: 0; width: 100%; }
+.gf-row { display: flex; align-items: baseline; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid var(--border); }
+.gf-row:last-child { border-bottom: none; }
+.gf-label { font-size: 12px; color: var(--secondary); font-family:'Outfit',sans-serif; }
+.gf-value { font-size: 18px; font-weight: 600; color: var(--white); font-variant-numeric: tabular-nums; }
+.gf-value.good { color: var(--good); }
+.gf-value.warn { color: var(--warn); }
+.progress-bar-track { height: 6px; background: var(--layer4); border-radius: 10px; overflow: hidden; margin: 14px 0 4px; }
+.progress-bar-fill { height: 100%; width: 0%; background: linear-gradient(90deg, var(--accent), #c3dde3); border-radius: 10px; }
+
+.stat-stack { display: flex; flex-direction: column; gap: 16px; }
+.stat-card { animation: ccIn 0.5s cubic-bezier(0.16,1,0.3,1) both; animation-delay: calc(var(--i,0)*60ms + 60ms); }
+.stat-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+.stat-title { font-size: 11px; font-family:'Space Mono',monospace; color: var(--mid); text-transform: uppercase; letter-spacing: 0.1em; }
+.stat-value { font-size: 26px; font-weight: 600; color: var(--white); font-variant-numeric: tabular-nums; }
+.stat-sub { font-size: 12px; color: var(--mid); margin-top: 4px; }
+
+.actions-row { display: flex; gap: 12px; margin-bottom: 16px; flex-wrap: wrap; }
+.actions-row .btn { flex: 1; min-width: 150px; }
+
+.cards-3 { display: grid; grid-template-columns: repeat(3,1fr); gap: 14px; margin-bottom: 16px; }
+@media (max-width: 720px) { .cards-3 { grid-template-columns: 1fr; } }
+.mini-card { animation: ccIn 0.5s cubic-bezier(0.16,1,0.3,1) both; animation-delay: calc(var(--i,0)*60ms + 120ms); }
+.mini-label { font-size: 11px; font-family:'Space Mono',monospace; color: var(--mid); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 8px; }
+.mini-value { font-size: 22px; font-weight: 600; color: var(--white); }
+.mini-foot { font-size: 12px; color: var(--secondary); margin-top: 6px; }
+
+.activity-list { display: flex; flex-direction: column; }
+.act-row { display: flex; align-items: center; gap: 14px; padding: 13px 0; border-bottom: 1px solid var(--border); }
+.act-row:last-child { border-bottom: none; }
+.act-icon { width: 34px; height: 34px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 14px; background: var(--layer3); border: 1px solid var(--border2); color: var(--accent); }
+.act-icon.auto { color: var(--good); }
+.act-icon.adjust { color: var(--secondary); }
+.act-icon.withdraw { color: var(--warn); }
+.act-body { flex: 1; min-width: 0; }
+.act-title { font-size: 13px; color: var(--text); font-weight: 500; }
+.act-time { font-size: 11px; color: var(--mid); font-family:'Space Mono',monospace; margin-top: 2px; }
+.act-amount { font-size: 14px; font-weight: 600; font-variant-numeric: tabular-nums; color: var(--good); white-space: nowrap; }
+.act-amount.neutral { color: var(--secondary); }
+.act-amount.negative { color: var(--warn); }
+
+.view-all-link { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--accent); text-decoration: none; margin-top: 14px; font-family:'Space Mono',monospace; letter-spacing: 0.05em; cursor: pointer; background: none; border: none; }
+
+/* ══════════════ SHARED PAGE-HEAD (history / settings) ══════════════ */
+.page-head { margin-bottom: 24px; }
+.page-head h1 { font-size: clamp(24px,3.6vw,34px); font-weight: 300; letter-spacing: -0.02em; }
+.page-head p { font-size: 13px; color: var(--secondary); margin-top: 6px; }
+
+/* ══════════════ HISTORY VIEW ══════════════ */
+.controls { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 20px; align-items: center; }
+.search-wrap { position: relative; flex: 1; min-width: 200px; }
+.search-wrap input {
+  width: 100%; background: var(--layer1); border: 1px solid var(--border2); border-radius: var(--radius);
+  padding: 11px 14px 11px 38px; font-family:'Outfit',sans-serif; font-size: 13px; color: var(--white); outline: none;
+  transition: border-color 0.2s ease;
+}
+.search-wrap input:focus { border-color: var(--accent); }
+.search-wrap svg { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); width: 15px; height: 15px; color: var(--mid); pointer-events: none; }
+
+.filter-chips { display: flex; gap: 6px; flex-wrap: wrap; }
+.chip {
+  font-family:'Space Mono',monospace; font-size: 11px; letter-spacing: 0.05em; text-transform: uppercase;
+  padding: 8px 14px; border-radius: 20px; border: 1px solid var(--border2); color: var(--secondary);
+  background: var(--layer1); cursor: pointer; transition: all 0.18s ease; white-space: nowrap;
+}
+.chip:hover { border-color: var(--mid); color: var(--white); }
+.chip.active { border-color: rgba(143,184,196,0.5); background: var(--layer3); color: var(--white); }
+
+.stats-strip { display: flex; gap: 14px; margin-bottom: 22px; flex-wrap: wrap; }
+.strip-item { flex: 1; min-width: 130px; background: var(--layer2); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 16px; }
+.strip-label { font-size: 10px; font-family:'Space Mono',monospace; color: var(--mid); text-transform: uppercase; letter-spacing: 0.08em; }
+.strip-value { font-size: 18px; font-weight: 600; color: var(--white); margin-top: 4px; }
+
+.day-group { margin-bottom: 22px; }
+.day-heading { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+.day-heading .d-date { font-size: 12px; font-family:'Space Mono',monospace; color: var(--secondary); letter-spacing: 0.05em; }
+.day-heading .d-line { flex: 1; height: 1px; background: var(--border); }
+.day-heading .d-total { font-size: 12px; color: var(--good); font-family:'Space Mono',monospace; }
+.day-heading .d-total.negative { color: var(--warn); }
+
+.timeline { display: flex; flex-direction: column; gap: 8px; }
+.t-row {
+  display: flex; align-items: center; gap: 14px; background: var(--layer2); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 13px 16px; transition: border-color 0.18s ease;
+}
+.t-row:hover { border-color: var(--border2); }
+.t-icon { width: 34px; height: 34px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 14px; background: var(--layer3); border: 1px solid var(--border2); color: var(--accent); }
+.t-icon.auto { color: var(--good); }
+.t-icon.adjust { color: var(--secondary); }
+.t-icon.withdraw { color: var(--warn); }
+.t-body { flex: 1; min-width: 0; }
+.t-title { font-size: 13.5px; color: var(--text); font-weight: 500; }
+.t-meta { font-size: 11px; color: var(--mid); font-family:'Space Mono',monospace; margin-top: 2px; }
+.t-right { text-align: right; flex-shrink: 0; }
+.t-amount { font-size: 14.5px; font-weight: 600; font-variant-numeric: tabular-nums; color: var(--good); }
+.t-amount.neutral { color: var(--secondary); }
+.t-amount.negative { color: var(--warn); }
+.t-balance { font-size: 10.5px; color: var(--mid); font-family:'Space Mono',monospace; margin-top: 2px; }
+.t-actions { display: flex; gap: 6px; margin-left: 6px; }
+.t-action-btn {
+  width: 30px; height: 30px; border-radius: var(--radius-sm); border: 1px solid var(--border2); background: var(--layer1);
+  color: var(--secondary); display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.15s ease; flex-shrink: 0;
+}
+.t-action-btn:hover { color: var(--white); border-color: var(--mid); }
+.t-action-btn.danger:hover { color: var(--warn); border-color: rgba(217,102,122,0.5); }
+
+.confirm-inline { display: none; align-items: center; gap: 8px; margin-top: 8px; padding-top: 8px; border-top: 1px dashed var(--border2); }
+.confirm-inline.show { display: flex; }
+.confirm-inline span { font-size: 12px; color: var(--warn); flex: 1; }
+
+/* ══════════════ SETTINGS VIEW ══════════════ */
+.settings-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; align-items: start; }
+@media (max-width: 860px) { .settings-grid { grid-template-columns: 1fr; } }
+
+.settings-section { margin-bottom: 16px; }
+.settings-section h3 { font-size: 15px; font-weight: 600; margin-bottom: 4px; }
+.settings-section .sub { font-size: 12.5px; color: var(--secondary); margin-bottom: 18px; }
+
+.toggle-row { display: flex; align-items: center; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid var(--border); }
+.toggle-row:last-child { border-bottom: none; }
+.toggle-label { font-size: 13px; color: var(--text); }
+.toggle-desc { font-size: 11.5px; color: var(--mid); margin-top: 2px; }
+.switch { position: relative; width: 42px; height: 24px; flex-shrink: 0; }
+.switch input { opacity: 0; width: 0; height: 0; }
+.switch-track { position: absolute; inset: 0; background: var(--layer4); border: 1px solid var(--border2); border-radius: 20px; cursor: pointer; transition: background 0.2s ease; }
+.switch-track::before { content:''; position: absolute; width: 16px; height: 16px; left: 3px; top: 2px; background: var(--secondary); border-radius: 50%; transition: transform 0.2s cubic-bezier(0.34,1.4,0.64,1), background 0.2s ease; }
+.switch input:checked + .switch-track { background: rgba(143,184,196,0.3); border-color: rgba(143,184,196,0.5); }
+.switch input:checked + .switch-track::before { transform: translateX(18px); background: var(--accent); }
+.switch input:disabled + .switch-track { opacity: 0.4; cursor: not-allowed; }
+
+.badge-soon { font-size: 9px; font-family:'Space Mono',monospace; text-transform: uppercase; letter-spacing: 0.08em; color: var(--mid); border: 1px solid var(--border2); padding: 2px 8px; border-radius: 20px; margin-left: 8px; }
+
+.io-row { display: flex; gap: 10px; flex-wrap: wrap; }
+.io-row .btn { flex: 1; min-width: 160px; }
+#importFileInput { display: none; }
+
+.danger-zone { border-color: rgba(217,102,122,0.25); }
+.danger-item { display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 14px 0; border-bottom: 1px solid rgba(217,102,122,0.15); flex-wrap: wrap; }
+.danger-item:last-child { border-bottom: none; }
+.danger-title { font-size: 13.5px; color: var(--text); font-weight: 500; }
+.danger-desc { font-size: 11.5px; color: var(--mid); margin-top: 2px; max-width: 380px; }
+
+.confirm-box { display: none; align-items: center; gap: 10px; margin-top: 12px; padding: 12px; background: var(--warn-bg); border: 1px solid rgba(217,102,122,0.3); border-radius: var(--radius); }
+.confirm-box.show { display: flex; }
+.confirm-box span { flex: 1; font-size: 12px; color: #F2D5DA; }
+
+.theme-swatches { display: flex; gap: 10px; margin-top: 10px; }
+.theme-swatch { width: 44px; height: 44px; border-radius: var(--radius); border: 2px solid var(--border2); cursor: pointer; position: relative; }
+.theme-swatch.active { border-color: var(--accent); }
+.theme-swatch.locked { opacity: 0.35; cursor: not-allowed; }
+
+.acct-row { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid var(--border); }
+.acct-row:last-child { border-bottom: none; }
+.acct-row span:first-child { font-size: 12px; color: var(--secondary); }
+.acct-row span:last-child { font-size: 14px; font-weight: 600; }
+</style>
+</head>
+<body>
+
+<div id="ambient"><span></span><span></span><span></span></div>
+
+<div id="preloader">
+  <div class="pre-ring"><div class="pre-ring-inner"><img src="assets/logo.png" alt="N"></div></div>
+  <div class="pre-name">nukrax<span>.goal</span></div>
+  <div class="pre-track"><div class="pre-fill"></div></div>
+  <div class="pre-sub">loading dashboard</div>
+</div>
+
+<div id="toast"></div>
+
+<div id="app">
+  <nav>
+    <a href="#dashboard" class="nav-logo" data-view="dashboard">
+      <div class="nav-logo-mark"><img src="assets/logo.png" alt="N"></div>
+      <span class="nav-brand">nukrax<em>.goal</em></span>
+    </a>
+    <div class="nav-links" id="navLinks">
+      <a href="#dashboard" class="nav-link active" data-view="dashboard">Dashboard</a>
+      <a href="#history" class="nav-link" data-view="history">History</a>
+      <a href="#settings" class="nav-link" data-view="settings">Settings</a>
+    </div>
+    <div class="nav-right">
+      <div class="nav-pill"><span class="dot"></span>@CosmoLanex</div>
+      <button class="nav-burger" id="navBurger" aria-label="Menu">☰</button>
+    </div>
+  </nav>
+
+  <main>
+
+    <!-- ══════════════ DASHBOARD VIEW ══════════════ -->
+    <section id="view-dashboard" class="view active">
+      <div class="hero">
+        <div>
+          <div class="hero-sup"><span class="dot2"></span>Personal Goal Tracker</div>
+          <h1>Progress toward <strong id="heroGoalAmt">₹2,00,000</strong></h1>
+        </div>
+        <div class="hero-meta">Target Date<br><b id="heroTargetDate">Dec 25, 2026</b></div>
+      </div>
+
+      <div class="dash-grid">
+        <div class="panel goal-card">
+          <div class="ring-wrap">
+            <svg viewBox="0 0 168 168">
+              <circle class="ring-track" cx="84" cy="84" r="72"></circle>
+              <circle class="ring-fill" id="ringFill" cx="84" cy="84" r="72"></circle>
+            </svg>
+            <div class="ring-center">
+              <div class="ring-pct" id="ringPct">0%</div>
+              <div class="ring-label">Complete</div>
+            </div>
+          </div>
+          <div class="goal-figures">
+            <div class="gf-row"><span class="gf-label">Current Capital</span><span class="gf-value" id="figCapital">₹0</span></div>
+            <div class="gf-row"><span class="gf-label">Goal Amount</span><span class="gf-value" id="figGoal">₹2,00,000</span></div>
+            <div class="gf-row"><span class="gf-label">Remaining</span><span class="gf-value warn" id="figRemaining">₹2,00,000</span></div>
+            <div class="progress-bar-track"><div class="progress-bar-fill" id="barFill"></div></div>
+          </div>
+        </div>
+
+        <div class="stat-stack">
+          <div class="panel stat-card" style="--i:0">
+            <div class="stat-top"><span class="stat-title">Days Remaining</span></div>
+            <div class="stat-value" id="statDaysRemaining">0</div>
+            <div class="stat-sub" id="statDaysPassed">0 days passed</div>
+          </div>
+          <div class="panel stat-card" style="--i:1">
+            <div class="stat-top"><span class="stat-title">Avg Needed / Day</span></div>
+            <div class="stat-value" id="statPaceNeeded">₹0</div>
+            <div class="stat-sub" id="statPaceStatus">on pace</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="cards-3">
+        <div class="panel mini-card" style="--i:0">
+          <div class="mini-label">Today's Earnings</div>
+          <div class="mini-value" id="miniToday">₹0</div>
+          <div class="mini-foot" id="miniTodayFoot">nothing logged yet today</div>
+        </div>
+        <div class="panel mini-card" style="--i:1">
+          <div class="mini-label">Total Earnings</div>
+          <div class="mini-value" id="miniTotal">₹0</div>
+          <div class="mini-foot" id="miniTotalFoot">since start</div>
+        </div>
+        <div class="panel mini-card" style="--i:2">
+          <div class="mini-label">Current Streak</div>
+          <div class="mini-value" id="miniStreak">0 days</div>
+          <div class="mini-foot">consecutive active days</div>
+        </div>
+      </div>
+
+      <div class="actions-row">
+        <button class="btn btn-accent" id="btnAddEarning">+ Add Manual Earning</button>
+        <button class="btn btn-accent" id="btnConfirm200">Confirm Today's ₹200</button>
+        <button class="btn btn-ghost" id="btnEditCapital">Edit Current Capital</button>
+        <button class="btn btn-danger" id="btnTakeOut">− Take Out Money</button>
+      </div>
+
+      <div class="cards-3">
+        <div class="panel mini-card" style="--i:0">
+          <div class="mini-label">This Week</div>
+          <div class="mini-value" id="weekTotal">₹0</div>
+          <div class="mini-foot" id="weekCount">0 entries</div>
+        </div>
+        <div class="panel mini-card" style="--i:1">
+          <div class="mini-label">This Month</div>
+          <div class="mini-value" id="monthTotal">₹0</div>
+          <div class="mini-foot" id="monthCount">0 entries</div>
+        </div>
+        <div class="panel mini-card" style="--i:2">
+          <div class="mini-label">Est. Completion</div>
+          <div class="mini-value" id="estCompletion">—</div>
+          <div class="mini-foot">at current average pace</div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="sec-label">Recent Activity</div>
+        <div class="activity-list" id="activityList"></div>
+        <button class="view-all-link" id="btnViewAllHistory">View full history →</button>
+      </div>
+    </section>
+
+    <!-- ══════════════ HISTORY VIEW ══════════════ -->
+    <section id="view-history" class="view">
+      <div class="page-head">
+        <h1>History</h1>
+        <p>Every entry — manual earnings, withdrawals, daily confirmations, and capital adjustments.</p>
+      </div>
+
+      <div class="stats-strip">
+        <div class="strip-item"><div class="strip-label">Total Entries</div><div class="strip-value" id="stripCount">0</div></div>
+        <div class="strip-item"><div class="strip-label">Total Earned (net)</div><div class="strip-value" id="stripTotal">₹0</div></div>
+        <div class="strip-item"><div class="strip-label">Current Balance</div><div class="strip-value" id="stripBalance">₹0</div></div>
+      </div>
+
+      <div class="controls">
+        <div class="search-wrap">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input type="text" id="searchInput" placeholder="Search notes...">
+        </div>
+        <div class="filter-chips" id="typeChips">
+          <div class="chip active" data-type="all">All</div>
+          <div class="chip" data-type="manual">Manual</div>
+          <div class="chip" data-type="auto200">Daily ₹200</div>
+          <div class="chip" data-type="withdrawal">Withdrawals</div>
+          <div class="chip" data-type="capital_adjust">Adjustments</div>
+        </div>
+        <div class="filter-chips" id="rangeChips">
+          <div class="chip active" data-range="all">All Time</div>
+          <div class="chip" data-range="today">Today</div>
+          <div class="chip" data-range="week">This Week</div>
+          <div class="chip" data-range="month">This Month</div>
+        </div>
+      </div>
+
+      <div id="timelineContainer"></div>
+    </section>
+
+    <!-- ══════════════ SETTINGS VIEW ══════════════ -->
+    <section id="view-settings" class="view">
+      <div class="page-head">
+        <h1>Settings</h1>
+        <p>Configure your goal, back up your data, or reset the dashboard.</p>
+      </div>
+
+      <div class="settings-grid">
+        <div>
+          <div class="panel settings-section">
+            <h3>Goal Configuration</h3>
+            <div class="sub">Changes apply instantly and recalculate all progress figures.</div>
+            <form id="goalForm">
+              <div class="field">
+                <label for="goalAmountInput">Goal Amount (₹)</label>
+                <input type="number" id="goalAmountInput" min="1" step="1">
+              </div>
+              <div class="field">
+                <label for="targetDateInput">Target Date</label>
+                <input type="date" id="targetDateInput">
+              </div>
+              <div class="field">
+                <label for="dailyTargetInput">Daily Target (₹)</label>
+                <input type="number" id="dailyTargetInput" min="1" step="1">
+                <div class="hint">Used by the "Confirm Today's" button on the dashboard.</div>
+              </div>
+              <button type="submit" class="btn btn-accent btn-block">Save Goal Settings</button>
+            </form>
+          </div>
+
+          <div class="panel settings-section">
+            <h3>Animation & Interface</h3>
+            <div class="sub">Fine-tune the motion on your dashboard.</div>
+            <div class="toggle-row">
+              <div>
+                <div class="toggle-label">Animations</div>
+                <div class="toggle-desc">Counters, progress rings, transitions</div>
+              </div>
+              <label class="switch"><input type="checkbox" id="animToggle"><span class="switch-track"></span></label>
+            </div>
+            <div class="toggle-row">
+              <div>
+                <div class="toggle-label">Theme <span class="badge-soon">Coming Soon</span></div>
+                <div class="toggle-desc">Dark theme is the only option for now</div>
+              </div>
+            </div>
+            <div class="theme-swatches">
+              <div class="theme-swatch active" style="background:#07090B" title="Dark (current)"></div>
+              <div class="theme-swatch locked" style="background:#F2F5F5" title="Light — coming soon"></div>
+              <div class="theme-swatch locked" style="background:#8FB8C4" title="Accent — coming soon"></div>
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <div class="panel settings-section">
+            <h3>Backup & Restore</h3>
+            <div class="sub">Your data lives only in this browser. Export regularly.</div>
+            <div class="io-row">
+              <button class="btn btn-accent" id="btnExport">Export JSON Backup</button>
+              <button class="btn btn-ghost" id="btnImport">Import JSON Backup</button>
+            </div>
+            <input type="file" id="importFileInput" accept="application/json,.json">
+            <div class="hint" style="margin-top:12px;">Importing fully replaces current data — export a backup first if unsure.</div>
+          </div>
+
+          <div class="panel settings-section">
+            <h3>Account</h3>
+            <div class="sub">Single-user personal dashboard.</div>
+            <div class="acct-row"><span>Username</span><span>@CosmoLanex</span></div>
+            <div class="acct-row"><span>Started Tracking</span><span id="startedDateDisplay">—</span></div>
+          </div>
+
+          <div class="panel settings-section danger-zone">
+            <h3 style="color:#F2D5DA;">Danger Zone</h3>
+            <div class="sub">These actions cannot be undone.</div>
+
+            <div class="danger-item">
+              <div>
+                <div class="danger-title">Clear History</div>
+                <div class="danger-desc">Deletes all logged entries and confirmations. Capital and goal settings stay.</div>
+              </div>
+              <button class="btn btn-sm btn-danger" id="btnClearHistory">Clear</button>
+            </div>
+            <div class="confirm-box" id="confirmClearHistory">
+              <span>Delete all history permanently?</span>
+              <button class="btn btn-sm btn-danger" id="confirmClearHistoryYes">Yes, clear it</button>
+              <button class="btn btn-sm btn-ghost" id="confirmClearHistoryNo">Cancel</button>
+            </div>
+
+            <div class="danger-item">
+              <div>
+                <div class="danger-title">Reset Dashboard</div>
+                <div class="danger-desc">Resets capital to ₹0 and goal settings to defaults. History is kept.</div>
+              </div>
+              <button class="btn btn-sm btn-danger" id="btnResetDash">Reset</button>
+            </div>
+            <div class="confirm-box" id="confirmResetDash">
+              <span>Reset capital and goal settings?</span>
+              <button class="btn btn-sm btn-danger" id="confirmResetDashYes">Yes, reset</button>
+              <button class="btn btn-sm btn-ghost" id="confirmResetDashNo">Cancel</button>
+            </div>
+
+            <div class="danger-item">
+              <div>
+                <div class="danger-title">Full Factory Reset</div>
+                <div class="danger-desc">Wipes everything — capital, goal, history, settings. Cannot be recovered without a backup.</div>
+              </div>
+              <button class="btn btn-sm btn-danger" id="btnFullReset">Reset Everything</button>
+            </div>
+            <div class="confirm-box" id="confirmFullReset">
+              <span>This wipes ALL data permanently. Are you sure?</span>
+              <button class="btn btn-sm btn-danger" id="confirmFullResetYes">Yes, wipe everything</button>
+              <button class="btn btn-sm btn-ghost" id="confirmFullResetNo">Cancel</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <footer>
+    <div class="footer-inner">
+      <div class="footer-l">nukrax.goal — ₹2,00,000 by Dec 25, 2026</div>
+      <div class="footer-r">@CosmoLanex · Local Data Only</div>
+    </div>
+  </footer>
+</div>
+
+<!-- Add Manual Earning Modal -->
+<div class="modal-overlay" id="modalEarning">
+  <div class="modal">
+    <h2>Add Manual Earning</h2>
+    <div class="modal-sub">Log money earned today. Updates capital, progress, and history instantly.</div>
+    <div class="field">
+      <label for="earningAmount">Amount (₹)</label>
+      <input type="number" id="earningAmount" placeholder="e.g. 500" min="1" step="1" inputmode="decimal">
+    </div>
+    <div class="field">
+      <label for="earningNote">Note (optional)</label>
+      <input type="text" id="earningNote" placeholder="e.g. Freelance payout">
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost btn-block" id="earningCancel">Cancel</button>
+      <button class="btn btn-accent btn-block" id="earningSubmit">Add Earning</button>
+    </div>
+  </div>
+</div>
+
+<!-- Take Out Money Modal -->
+<div class="modal-overlay" id="modalWithdraw">
+  <div class="modal">
+    <h2>Take Out Money</h2>
+    <div class="modal-sub">Deducts the amount from your current capital and logs it in history.</div>
+    <div class="field">
+      <label for="withdrawAmount">Amount (₹)</label>
+      <input type="number" id="withdrawAmount" placeholder="e.g. 500" min="1" step="1" inputmode="decimal">
+      <div class="hint" id="withdrawAvailableHint">Available: ₹0</div>
+    </div>
+    <div class="field">
+      <label for="withdrawNote">Note (optional)</label>
+      <input type="text" id="withdrawNote" placeholder="e.g. Withdrew for expenses">
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost btn-block" id="withdrawCancel">Cancel</button>
+      <button class="btn btn-danger btn-block" id="withdrawSubmit">Take Out</button>
+    </div>
+  </div>
+</div>
+
+<!-- Edit Capital Modal -->
+<div class="modal-overlay" id="modalCapital">
+  <div class="modal">
+    <h2>Edit Current Capital</h2>
+    <div class="modal-sub">Directly set your capital. This logs as a capital adjustment in history.</div>
+    <div class="field">
+      <label for="capitalAmount">New Capital (₹)</label>
+      <input type="number" id="capitalAmount" placeholder="e.g. 18500" min="0" step="1" inputmode="decimal">
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost btn-block" id="capitalCancel">Cancel</button>
+      <button class="btn btn-accent btn-block" id="capitalSubmit">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- Edit History Entry Modal -->
+<div class="modal-overlay" id="modalEdit">
+  <div class="modal">
+    <h2>Edit Entry</h2>
+    <div class="modal-sub">Adjust the amount. Running balances recalculate automatically.</div>
+    <div class="field">
+      <label for="editAmount">Amount (₹)</label>
+      <input type="number" id="editAmount" min="1" step="1" inputmode="decimal">
+    </div>
+    <div class="field">
+      <label for="editNote">Note</label>
+      <input type="text" id="editNote">
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost btn-block" id="editCancel">Cancel</button>
+      <button class="btn btn-accent btn-block" id="editSubmit">Save Changes</button>
+    </div>
+  </div>
+</div>
+
+<script src="assets/data/data.js"></script>
+<script src="assets/data/animation.js"></script>
+<script src="assets/data/dashboard.js"></script>
+<script src="assets/data/history.js"></script>
+<script src="assets/data/settings.js"></script>
+<script src="assets/data/app.js"></script>
+</body>
+</html>
